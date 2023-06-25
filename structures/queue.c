@@ -1,90 +1,102 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct {
-    int value;
-} Item;
+// typedef struct {
+//     int value;
+// } node;
+
+typedef enum {
+    type_pointer,
+    type_int,
+    type_float,
+    type_dobule,
+    type_long
+} DataType;
+
+typedef struct node {
+    DataType t;
+    union {
+        void* pointer;
+        int i;
+        float f;
+        double d;
+        long l;
+    } data;
+    struct node *next;
+} Node;
 
 typedef struct {
-    Item* items;    // array to store items
+    Node* nodes;    // array to store nodes
     int capacity;   // max capacity of the queue
     int size;       // current size of the queue
-    int head;       // index of the front item
-    int tail;       // index of the tail item
+    Node *head;
+    Node *tail;
 } Queue;
 
 Queue* create_queue(int capacity) {
     Queue* queue = (Queue*) malloc(sizeof(Queue));
-    queue->items = (Item*) malloc(capacity * sizeof(Item));
+    queue->nodes = (Node*) malloc(capacity * sizeof(Node));
     queue->capacity = capacity;
     queue->size = 0;
-    queue->head = -1;
-    queue->tail = -1;
+    queue->head = NULL;
+    queue->tail = NULL;
 
     return queue;
 }
 
-int is_empty(Queue* queue) {
-    return queue->size == 0;
-}
 
-int is_full(Queue* queue) {
-    return queue->size == queue->capacity;
-}
+void enqueue(Queue* queue, Node node) {
+    queue->size++;
 
-void enqueue(Queue* queue, Item item) {
-    if (is_full(queue)) {
-        printf("Queue is full. Cannot enqueue item.\n");
+    if (queue->tail == NULL) {
+        queue->tail = queue->head = &node;
         return;
     }
 
-    if (queue->head == -1)
-        queue->head = 0;
-
-    queue->tail++;
-    queue->items[queue->tail] = item;
-    queue->size++;
+    queue->tail->next = &node;
+    queue->tail = &node;
+    printf("queue head: %d\n", queue->head->data.i);
 }
 
-Item dequeue(Queue* queue) {
-    if (is_empty(queue)) {
-        Item null_item = {0};
-        return null_item;    
+Node dequeue(Queue* queue) {
+    if (queue->head == NULL) {
+        Node null_node = {0};
+        return null_node;    
     }
-    Item item = queue->items[queue->head];
-    queue->head++;
+
     queue->size--;
 
-    if (queue->head > queue->tail)
-        queue->head = queue->tail = -1;
+    Node* head = queue->head;
+    queue->head = queue->head->next;
 
-    return item;
+    // free
+
+    head->next = NULL;
+    
+    return *head;
 }
 
-void display(Queue* queue) {
-    printf("Queue elements are:\n");
-    for (int i = 0; i < queue->size; i++) {
-        printf("{%d} ", queue->items[i]);
-    }
-    printf("\n");
+Node peek(Queue* queue) {
+    return *(queue->head);
 }
 
 int main() {
     Queue* queue = create_queue(10);
-    Item items[10];
+    Node nodes[10];
 
     for (int i = 0; i < 10; i++) {
-        items[i].value = i * 10;
-        enqueue(queue, items[i]);
+        nodes[i].t = type_int;
+        nodes[i].data.i = (i + 1) * 100;
+        enqueue(queue, nodes[i]);
+        // printf("Queued node(%d):\n\ttype: %d\n\tvalue: %d\n", i, nodes[i].t, nodes[i].data.i);
     }
 
-    display(queue);
-
-    while (!is_empty(queue)) {
-        Item item = dequeue(queue);
+    while (queue->head != NULL) {
+        Node node = dequeue(queue);
+        printf("Dequeued node:\n\ttype: %d\n\tvalue: %d\n", node.t, node.data.i);
     }
 
-    free(queue->items);
+    free(queue->nodes);
     free(queue);
 
     return 0;
